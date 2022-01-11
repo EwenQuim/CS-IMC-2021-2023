@@ -18,6 +18,11 @@ graph = Graph(neo4j_server, auth=(neo4j_user, neo4j_password))
 
 BATCH_SIZE = 10000
 
+# le graphe est vidé manuellement en tapant la commande suivante dans l'interface web
+"""
+CALL apoc.periodic.iterate("MATCH (n) return id(n) as id", "MATCH (n) WHERE id(n) = id DETACH DELETE n", {batchSize:10000})
+yield batches, total return batches, total
+"""
 print("Deleting existing nodes and relationships...")
 graph.run("MATCH ()-[r]->() DELETE r")
 graph.run("MATCH (n:Name) DETACH DELETE n")
@@ -137,8 +142,8 @@ with pyodbc.connect(
                     graph.auto(),
                     importData[cat],
                     cat.replace(" ", "_"),
-                    start_node_key="nconst",
-                    end_node_key="tconst",
+                    start_node_key=("Name", "nconst"),
+                    end_node_key=("Title", "tconst"),
                 )
             exportedCount += len(rows)
             print(f"{exportedCount}/{totalCount} relationships exported to Neo4j")
