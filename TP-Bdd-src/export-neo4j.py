@@ -10,7 +10,10 @@ username = os.environ["TPBDD_USERNAME"]
 password = os.environ["TPBDD_PASSWORD"]
 driver= '{ODBC Driver 17 for SQL Server}'
 
-graph = Graph(os.environ["TPBDD_NEO4J_SERVER"], auth=(os.environ["TPBDD_NEO4J_USER"], os.environ["TPBDD_NEO4J_PASSWORD"]))
+graph = Graph(
+    os.environ["TPBDD_NEO4J_SERVER"],
+    auth=(os.environ["TPBDD_NEO4J_USER"], os.environ["TPBDD_NEO4J_PASSWORD"]),
+)
 
 BATCH_SIZE = 10000
 
@@ -18,8 +21,30 @@ print("Deleting existing nodes and relationships...")
 graph.run("MATCH ()-[r]->() DELETE r")
 graph.run("MATCH (n:Name) DETACH DELETE n")
 graph.run("MATCH (n:Title) DETACH DELETE n")
-
-with pyodbc.connect('DRIVER='+driver+';SERVER=tcp:'+server+';PORT=1433;DATABASE='+database+';UID='+username+';PWD='+ password) as conn:
+print(
+    "DRIVER="
+    + driver
+    + ";SERVER=tcp:"
+    + server
+    + ";PORT=1433;DATABASE="
+    + database
+    + ";UID="
+    + username
+    + ";PWD="
+    + password
+)
+with pyodbc.connect(
+    "DRIVER="
+    + driver
+    + ";SERVER=tcp:"
+    + server
+    + ";PORT=1433;DATABASE="
+    + database
+    + ";UID="
+    + username
+    + ";PWD="
+    + password
+) as conn:
     cursor = conn.cursor()
 
     # Titles
@@ -32,11 +57,12 @@ with pyodbc.connect('DRIVER='+driver+';SERVER=tcp:'+server+';PORT=1433;DATABASE=
         rows = cursor.fetchmany(BATCH_SIZE)
         if not rows:
             break
-        
+
         i = 0
         for row in rows:
             # Créer un objet Node avec comme label Title et les propriétés adéquates
             # A COMPLETER
+            n = Node("Title", tconst=row[0], primaryTitle=row[1], startYear=row[2])
             importData.append(n)
             i += 1
 
@@ -50,6 +76,31 @@ with pyodbc.connect('DRIVER='+driver+';SERVER=tcp:'+server+';PORT=1433;DATABASE=
     # Names
     # En vous basant sur ce qui a été fait dans la section précédente, exportez les données de la table tNames
     # A COMPLETER
+    # Titles
+    exportedCount = 0
+    cursor.execute("SELECT COUNT(1) FROM tNames")
+    totalCount = cursor.fetchval()
+    cursor.execute("SELECT nconst, primaryName, birthYear FROM tNames")
+    i = 0
+    while True:
+        importData = []
+        rows = cursor.fetchmany(BATCH_SIZE)
+        if not rows:
+            break
+
+        for row in rows:
+            # Créer un objet Node avec comme label Title et les propriétés adéquates
+            # A COMPLETER
+            n = Node("Name", nconst=row[0], primaryName=row[1], birthYear=row[2])
+            importData.append(n)
+            i += 1
+
+        try:
+            create_nodes(graph.auto(), importData, labels={"Name"})
+            exportedCount += len(rows)
+            print(f"{exportedCount}/{totalCount} names records exported to Neo4j")
+        except Exception as error:
+            print(error)
 
     try:
         print("Indexing Title nodes...")
@@ -59,20 +110,19 @@ with pyodbc.connect('DRIVER='+driver+';SERVER=tcp:'+server+';PORT=1433;DATABASE=
     except Exception as error:
         print(error)
 
-
     # Relationships
     exportedCount = 0
     cursor.execute("SELECT COUNT(1) FROM tPrincipals")
     totalCount = cursor.fetchval()
     cursor.execute(f"SELECT nconst, category, tconst FROM tPrincipals")
     while True:
-        importData = { "acted in": [], "directed": [], "produced": [], "composed": [] }
+        importData = {"acted in": [], "directed": [], "produced": [], "composed": []}
         rows = cursor.fetchmany(BATCH_SIZE)
         if not rows:
             break
-        
+
         for row in rows:
-            relTuple=(row[0], {}, row[2])
+            relTuple = (row[0], {}, row[2])
             importData[row[1]].append(relTuple)
 
         try:
@@ -82,7 +132,13 @@ with pyodbc.connect('DRIVER='+driver+';SERVER=tcp:'+server+';PORT=1433;DATABASE=
                 # https://py2neo.org/2021.1/bulk/index.html
                 # ATTENTION: remplacez les espaces par des _ pour nommer les types de relation
                 # A COMPLETER
-                None # Remplacez None par votre code                
+                create_relationships(
+                    graph.auto(),
+                    importData[cat],
+                    cat.replace(" ", "_"),
+                    start_node_key="nconst",
+                    end_node_key="tconst",
+                )
             exportedCount += len(rows)
             print(f"{exportedCount}/{totalCount} relationships exported to Neo4j")
         except Exception as error:
