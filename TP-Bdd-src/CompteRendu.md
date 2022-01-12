@@ -295,7 +295,8 @@ RETURN distinct n.primaryName limit 500
 **Exercice 9**: Trouvez les artistes ayant eu plusieurs responsabilités au cours de leur carrière (acteur, directeur, producteur...).
 
 ````cypher
-MATCH (n:Name)-[r]->(), (n:Name)-[t]->()
+MATCH ()<-[r]-(n:Name)-[s]->()
+WHERE type(r) <> type(s)
 RETURN n
 ````
 
