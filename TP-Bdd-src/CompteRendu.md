@@ -304,6 +304,10 @@ RETURN n
 **Exercice 10**: Montrez les artistes ayant  eu plusieurs responsabilités dans un même film (ex: à la fois acteur et  directeur, ou toute autre combinaison) et les titres de ces films.
 
 ````cypher
+MATCH (t:Title)<-[r]-(n:Name)-[s]->(t:Title)
+WHERE type(r) <> type(s)
+WITH DISTINCT n, t
+RETURN n.primaryName, t.primaryTitle
 ````
 
 
