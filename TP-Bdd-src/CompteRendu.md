@@ -326,6 +326,146 @@ ORDER BY COUNTING DESC LIMIT 5;
 
 Alone 65 actors
 
+
+## Gremlin
+
+
+**Exercice 1**: Ajoutez une personne ayant votre prénom et votre nom dans le graphe. Verifiez qui le noeud a bien éte crée.
+
+```gremlin
+g.V().addV('Name').property(T.id, "cc").property("primaryName", "Clarence Charles").property("birthYear", 1999).property("pk", "pk3")
+```
+Verification:
+````gremlin
+g.V().has('primaryName', 'Clarence Charles')
+````
+
+
+
+**Exercice 2**: Ajoutez un film nommé `L'histoire de mon 20 au cours Infrastructure de donnees`
+
+```gremlin
+g.V().addV('Title').property(T.id, "h20").property("primaryName", "L'histoire de mon 20 au cours d'Infra").property("startYear", 2022).property("pk", "pk1")
+```
+
+
+
+**Exercice 3**: Ajoutez la relation `ACTED_IN` qui modélise votre participation à ce film en tant qu'acteur/actrice
+
+```gremlin
+g.V()
+.hasLabel('Name').has('primaryName', 'Clarence Charles').as('actor')
+.hasLabel('Title').has('primaryTitle', 'L\'histoire de mon 20 en Infra').as('film')
+.addE('acted_in').from('actor').to('film')
+```
+
+````gremlin
+g.V().has('primaryName', 'Clarence Charles').outE('acted_in')
+````
+
+
+
+**Exercice 4**: Ajoutez deux de vos professeurs/enseignants comme réalisateurs/réalisatrices de ce film.
+
+````gremlin
+g.addV('Name').property(T.id, "lc").property('primaryName', 'Laurent Cabaret').property('birthYear', 1980).property("pk", "pk4")
+````
+
+````gremlin
+g.addV('Name').property(T.id, "gq").property('primaryName', 'Gianluca Quercini').property('birthYear', 1980).property("pk", "pk5")
+````
+
+```gremlin
+
+```
+g.V().as('actor').hasLabel('Title').has('primaryTitle', eq('L\'histoire de mon 20 en Infra')).as('film')
+.where(__.or(__.select('actor').values('id').is(eq('lc')), __.select('actor').values('id').is(eq('gq'))))
+.addE('directed').from('actor').to('film')
+
+
+```gremlin
+g.V().has('id', 'lc').outE('directed')
+```
+
+
+
+**Exercice 5**: Affichez le noeud représentant l'acteur nommé `Jude Law`, et visualisez son année de naissance.
+
+```gremlin
+g.V().hasLabel('Name').has('primaryName', eq('Jude Law'))
+.project('birthYear').by('birthYear')
+```
+
+1972
+
+
+
+**Exercice 6**: Visualisez l'ensemble des films.
+
+````gremlin
+g.V().hasLabel('Title')
+````
+
+
+**Exercice 7**: Trouvez les noms des artistes nés en `1960`, affichez ensuite leur nombre.
+
+````gremlin
+g.V().hasLabel('Name').has('birthYear',1960).count()
+````
+890
+
+
+
+**Exercice 8**: Trouver l'ensemble des acteurs (sans entrées doublons) qui ont joué dans plus d'un film.
+
+````gremlin
+g.V().hasLabel('Title').inE('acted_in').as('film_in_acted_in')
+.outV().as('n')
+.hasLabel('Name').outE('acted_in').as('film_out_acted_in')
+.inV().hasLabel('Title')
+.where(__.select('film_in_acted_in').where(neq('film_out_acted_in'))).select('n').project('primaryName').by('primaryName').dedup()
+````
+
+
+
+
+**Exercice 9**: Trouvez les artistes ayant eu plusieurs responsabilités au cours de leur carrière (acteur, directeur, producteur...).
+
+````cypher
+MATCH ()<-[r]-(n:Name)-[s]->() WHERE type(r) <> type(s) RETURN n
+````
+g.V().inE().as('r')
+.outV().hasLabel('Name').as('n')
+.outE().as('s')
+.inV().where(__.and(__.select('s').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).as('  GENERATED3')
+.select('r').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).where(neq('  GENERATED3')), __.select('r').where(neq('s'))))
+
+
+g.V().inE().as('r')
+.outV().hasLabel('Name').as('n')
+.outE().as('s')
+.inV().where(__.and(__.select('s').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).as('  GENERATED3')
+.select('r').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).where(neq('  GENERATED3')), __.select('r').where(neq('s'))))
+
+
+
+**Exercice 10**: Montrez les artistes ayant  eu plusieurs responsabilités dans un même film (ex: à la fois acteur et  directeur, ou toute autre combinaison) et les titres de ces films.
+
+````cypher
+MATCH (t:Title)<-[r]-(n:Name)-[s]->(t:Title) WHERE type(r) <> type(s) WITH DISTINCT n, t RETURN n.primaryName, t.primaryTitle
+````
+g.V().as('t').hasLabel('Title').inE().as('r').outV().as('n').hasLabel('Name').outE().as('s').inV().as('  GENERATED3').where(__.select('  GENERATED3').where(eq('t'))).where(__.and(__.select('s').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).as('  GENERATED4').select('r').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).where(neq('  GENERATED4')), __.select('r').where(neq('s')))).select('n', 't').project('n', 't').by(__.select('n')).by(__.select('t')).dedup().as('  GENERATED5').select('n').as('n').select('  GENERATED5').select('t').as('t').select('n', 't').project('n.primaryName', 't.primaryTitle').by(__.select('n').choose(__.values('primaryName'), __.values('primaryName'), __.constant('  cypher.null'))).by(__.select('t').choose(neq('  cypher.null'), __.choose(__.values('primaryTitle'), __.values('primaryTitle'), __.constant('  cypher.null'))))
+
+
+**Exercice 11**: Trouver le nom du ou des film(s) ayant le plus d'acteurs.
+
+````cypher
+MATCH (actor:Name)-[:acted_in]->(movie:Title) RETURN movie.primaryTitle, COLLECT(DISTINCT actor.nconst), COUNT(DISTINCT actor) as COUNTING ORDER BY COUNTING DESC LIMIT 5;
+````
+
+g.V().as('actor').hasLabel('Name').outE('acted_in').inV().as('movie').hasLabel('Title').select('movie', 'actor').group().by(__.select('movie').choose(__.values('primaryTitle'), __.values('primaryTitle'), __.constant('  cypher.null'))).by(__.fold().project('movie.primaryTitle', 'COLLECT(DISTINCT actor.nconst)', 'COUNTING').by(__.unfold().select('movie').choose(neq('  cypher.null'), __.choose(__.values('primaryTitle'), __.values('primaryTitle'), __.constant('  cypher.null')))).by(__.unfold().select('actor').choose(neq('  cypher.null'), __.choose(__.values('nconst'), __.values('nconst'), __.constant('  cypher.null'))).dedup().is(neq('  cypher.null')).fold()).by(__.unfold().select('actor').dedup().is(neq('  cypher.null')).count())).unfold().select(values).order().by(__.select('COUNTING'), desc)
+
+
 ## TIL
 
 - strings entre single quotes
