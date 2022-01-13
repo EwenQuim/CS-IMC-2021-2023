@@ -345,7 +345,7 @@ g.V().has('primaryName', 'Clarence Charles')
 **Exercice 2**: Ajoutez un film nommé `L'histoire de mon 20 au cours Infrastructure de donnees`
 
 ```gremlin
-g.V().addV('Title').property(T.id, "h20").property("primaryName", "L'histoire de mon 20 au cours d'Infra").property("startYear", 2022).property("pk", "pk1")
+g.V().addV('Title').property(T.id, "hh20").property("primaryTitle", "L'histoire de mon 20 en Infra").property("startYear", 2022).property("pk", "pk11")
 ```
 
 
@@ -355,7 +355,7 @@ g.V().addV('Title').property(T.id, "h20").property("primaryName", "L'histoire de
 ```gremlin
 g.V()
 .hasLabel('Name').has('primaryName', 'Clarence Charles').as('actor')
-.hasLabel('Title').has('primaryTitle', 'L\'histoire de mon 20 en Infra').as('film')
+.V().hasLabel('Title').has('primaryTitle', "L'histoire de mon 20 en Infra").as('film')
 .addE('acted_in').from('actor').to('film')
 ```
 
@@ -376,12 +376,10 @@ g.addV('Name').property(T.id, "gq").property('primaryName', 'Gianluca Quercini')
 ````
 
 ```gremlin
-
-```
-g.V().as('actor').hasLabel('Title').has('primaryTitle', eq('L\'histoire de mon 20 en Infra')).as('film')
-.where(__.or(__.select('actor').values('id').is(eq('lc')), __.select('actor').values('id').is(eq('gq'))))
+g.V().has('primaryTitle', "L'histoire de mon 20 en Infra").as('film')
+.V().where(__.has(id,'lc').or().has(id,'gq')).as('actor')
 .addE('directed').from('actor').to('film')
-
+```
 
 ```gremlin
 g.V().has('id', 'lc').outE('directed')
@@ -397,7 +395,6 @@ g.V().hasLabel('Name').has('primaryName', eq('Jude Law'))
 ```
 
 1972
-
 
 
 **Exercice 6**: Visualisez l'ensemble des films.
@@ -431,30 +428,28 @@ g.V().hasLabel('Title').inE('acted_in').as('film_in_acted_in')
 
 **Exercice 9**: Trouvez les artistes ayant eu plusieurs responsabilités au cours de leur carrière (acteur, directeur, producteur...).
 
-````cypher
-MATCH ()<-[r]-(n:Name)-[s]->() WHERE type(r) <> type(s) RETURN n
+````gremlin
+g.V().inE().as('r')
+.outV().hasLabel('Name').as('persons')
+.outE().as('s')
+.inV().where(__.select('r').where(neq('s'))).select('persons')
 ````
-g.V().inE().as('r')
-.outV().hasLabel('Name').as('n')
-.outE().as('s')
-.inV().where(__.and(__.select('s').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).as('  GENERATED3')
-.select('r').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).where(neq('  GENERATED3')), __.select('r').where(neq('s'))))
 
-
-g.V().inE().as('r')
-.outV().hasLabel('Name').as('n')
-.outE().as('s')
-.inV().where(__.and(__.select('s').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).as('  GENERATED3')
-.select('r').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).where(neq('  GENERATED3')), __.select('r').where(neq('s'))))
 
 
 
 **Exercice 10**: Montrez les artistes ayant  eu plusieurs responsabilités dans un même film (ex: à la fois acteur et  directeur, ou toute autre combinaison) et les titres de ces films.
 
-````cypher
-MATCH (t:Title)<-[r]-(n:Name)-[s]->(t:Title) WHERE type(r) <> type(s) WITH DISTINCT n, t RETURN n.primaryName, t.primaryTitle
+
+````gremlin
+g.V().hasLabel('Title').as('t')
+.V().hasLabel('Title').as('t2')
+.V().inE().as('r')
+.V().outE().as('s')
+.V().hasLabel('Name').as('n')
+.where(__.select('t2').where(eq('t')).where(__.select('r').where(neq('s')) ) )
+.select('n').project('n').by('primaryName').dedup()
 ````
-g.V().as('t').hasLabel('Title').inE().as('r').outV().as('n').hasLabel('Name').outE().as('s').inV().as('  GENERATED3').where(__.select('  GENERATED3').where(eq('t'))).where(__.and(__.select('s').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).as('  GENERATED4').select('r').choose(neq('  cypher.null'), __.label().is(neq('vertex'))).is(neq('  cypher.null')).where(neq('  GENERATED4')), __.select('r').where(neq('s')))).select('n', 't').project('n', 't').by(__.select('n')).by(__.select('t')).dedup().as('  GENERATED5').select('n').as('n').select('  GENERATED5').select('t').as('t').select('n', 't').project('n.primaryName', 't.primaryTitle').by(__.select('n').choose(__.values('primaryName'), __.values('primaryName'), __.constant('  cypher.null'))).by(__.select('t').choose(neq('  cypher.null'), __.choose(__.values('primaryTitle'), __.values('primaryTitle'), __.constant('  cypher.null'))))
 
 
 **Exercice 11**: Trouver le nom du ou des film(s) ayant le plus d'acteurs.
