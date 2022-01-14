@@ -454,5 +454,5 @@ g.V().hasLabel('Name').as('actor')
 .select('movie', 'actor').group().by('primaryTitle')
 .by(__.fold().project('primaryTitle', 'COLLECT(DISTINCT id)', 'COUNTING')
 .dedup().fold()
-.by(__.unfold().select('actor').dedup().count())).unfold().select(values).order().by(_.select('COUNTING'), desc)
+.by(__.unfold().select('actor').dedup().count())).unfold().select(values).order().by(__.select('COUNTING'), desc)
 ````
