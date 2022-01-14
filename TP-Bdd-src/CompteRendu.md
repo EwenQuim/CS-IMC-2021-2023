@@ -1,6 +1,10 @@
 # TP Infrastructure
 
-## SQL
+_Clarence Charles & Ewen Quimerc'h_
+
+
+
+## 1. SQL
 
 **Exercice 0**: Décrivez les tables et les attributs.
 
@@ -56,7 +60,7 @@ select count(nconst) from [dbo].[tNames] where dbo.tnames.birthYear = 1960;
 **Exercice 4**: Trouvez l'année de naissance la plus représentée parmi les acteurs (sauf 0!), et combien d'acteurs sont nés cette année là.
 
 ```sql
-select top 3 count(nconst), birthYear from [dbo].[tNames] where birthYear <> 0 group by birthYear order by count(nconst) DESC; 
+select count(nconst), birthYear from [dbo].[tNames] where birthYear <> 0 group by birthYear order by count(nconst) DESC; 
 ```
 
 | Nombre | Année |
@@ -64,22 +68,6 @@ select top 3 count(nconst), birthYear from [dbo].[tNames] where birthYear <> 0 g
 | 1775   | 1980  |
 | 1727   | 1979  |
 | 1716   | 1978  |
-
-Acteurs seulements
-
-```sql
-select count([dbo].[tNames].nconst), birthYear from [dbo].[tNames] 
-join [dbo].[tPrincipals] on [dbo].[tNames].nconst = [dbo].[tPrincipals].nconst
-where birthYear <> 0
-and category like 'acted in'
-group by birthYear order by count([dbo].[tNames].nconst) DESC; 
-```
-
-| Nombre | Année |
-| ------ | ----- |
-| 3486   | 1980  |
-| 3420   | 1986  |
-| 3366   | 1982  |
 
 
 
@@ -190,7 +178,7 @@ on dbo.tNames.nconst = solution.nconst;
 
 
 
-## Cypher
+## 2. Cypher
 
 **Exercice 1**: Ajoutez une personne ayant votre prénom et votre nom dans le graphe. Verifiez qui le noeud a bien éte crée.
 
@@ -327,7 +315,9 @@ ORDER BY COUNTING DESC LIMIT 5;
 Alone 65 actors
 
 
-## Gremlin
+
+
+## 3. Gremlin
 
 
 **Exercice 1**: Ajoutez une personne ayant votre prénom et votre nom dans le graphe. Verifiez qui le noeud a bien éte crée.
@@ -335,7 +325,7 @@ Alone 65 actors
 ```gremlin
 g.V().addV('Name').property(T.id, "cc").property("primaryName", "Clarence Charles").property("birthYear", 1999).property("pk", "pk3")
 ```
-Verification:
+Vérification:
 ````gremlin
 g.V().has('primaryName', 'Clarence Charles')
 ````
@@ -397,11 +387,14 @@ g.V().hasLabel('Name').has('primaryName', eq('Jude Law'))
 1972
 
 
+
+
 **Exercice 6**: Visualisez l'ensemble des films.
 
 ````gremlin
 g.V().hasLabel('Title')
 ````
+
 
 
 **Exercice 7**: Trouvez les noms des artistes nés en `1960`, affichez ensuite leur nombre.
@@ -452,18 +445,14 @@ g.V().hasLabel('Title').as('t')
 ````
 
 
+
 **Exercice 11**: Trouver le nom du ou des film(s) ayant le plus d'acteurs.
 
-````cypher
-MATCH (actor:Name)-[:acted_in]->(movie:Title) RETURN movie.primaryTitle, COLLECT(DISTINCT actor.nconst), COUNT(DISTINCT actor) as COUNTING ORDER BY COUNTING DESC LIMIT 5;
+````gremlin
+g.V().hasLabel('Name').as('actor')
+.outE('acted_in').inV().hasLabel('Title').as('movie')
+.select('movie', 'actor').group().by('primaryTitle')
+.by(__.fold().project('primaryTitle', 'COLLECT(DISTINCT id)', 'COUNTING')
+.dedup().fold()
+.by(__.unfold().select('actor').dedup().count())).unfold().select(values).order().by(_.select('COUNTING'), desc)
 ````
-
-g.V().as('actor').hasLabel('Name').outE('acted_in').inV().as('movie').hasLabel('Title').select('movie', 'actor').group().by(__.select('movie').choose(__.values('primaryTitle'), __.values('primaryTitle'), __.constant('  cypher.null'))).by(__.fold().project('movie.primaryTitle', 'COLLECT(DISTINCT actor.nconst)', 'COUNTING').by(__.unfold().select('movie').choose(neq('  cypher.null'), __.choose(__.values('primaryTitle'), __.values('primaryTitle'), __.constant('  cypher.null')))).by(__.unfold().select('actor').choose(neq('  cypher.null'), __.choose(__.values('nconst'), __.values('nconst'), __.constant('  cypher.null'))).dedup().is(neq('  cypher.null')).fold()).by(__.unfold().select('actor').dedup().is(neq('  cypher.null')).count())).unfold().select(values).order().by(__.select('COUNTING'), desc)
-
-
-## TIL
-
-- strings entre single quotes
-- simple égal
-- multiple select statements in SQL
-- aggregators columns need to be renamed to be used as result for another table
